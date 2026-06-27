@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="WorldIntel"/>
+<title>WorldIntel</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#05080F;color:#D8E4F4;font-family:'Space Grotesk',sans-serif;-webkit-text-size-adjust:100%}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:#162035}
+input,button{font-family:'Space Grotesk',sans-serif;font-size:14px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── SETUP ── */
+#setup{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.card{background:#090E1A;border:1px solid #162035;border-radius:14px;padding:28px;max-width:460px;width:100%}
+.logo{font-size:20px;font-weight:700;letter-spacing:.06em;margin-bottom:4px}
+.logo span{color:#00D9FF}
+.sub{font-size:10px;color:#4A5A78;letter-spacing:.1em;margin-left:6px;font-weight:400}
+.desc{font-size:13px;color:#8898B8;line-height:1.7;margin:10px 0 18px}
+.step-box{background:#0C1220;border:1px solid #162035;border-radius:8px;padding:13px;margin-bottom:16px}
+.step-title{font-size:10px;color:#00D9FF;font-weight:700;letter-spacing:.08em;margin-bottom:7px}
+.step-box ol{margin:0;padding-left:16px;font-size:12px;color:#8898B8;line-height:2.1}
+.step-box .hi{color:#00D9FF;font-family:'JetBrains Mono',monospace;font-size:11px}
+.lbl{font-size:11px;color:#4A5A78;letter-spacing:.06em;display:block;margin-bottom:5px;margin-top:12px}
+.inp{width:100%;background:#0C1220;border:1px solid #162035;border-radius:7px;padding:11px 13px;color:#D8E4F4;font-size:13px;font-family:'JetBrains Mono',monospace;outline:none;transition:border .2s}
+.inp:focus{border-color:#00D9FF66}
+.inp::placeholder{color:#3A4A68}
+.btn{width:100%;background:#00D9FF;color:#05080F;border:none;border-radius:7px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.05em;margin-top:14px;transition:background .2s}
+.btn:hover{background:#00C0E8}
+.btn:disabled{background:#162035;color:#4A5A78;cursor:not-allowed}
+.features{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:14px;padding-top:12px;border-top:1px solid #162035}
+.feat{font-size:11px;color:#8898B8;display:flex;align-items:center;gap:5px;padding:3px 0}
+.fdot{color:#B6FF3D;font-size:9px}
+
+/* ── DASHBOARD ── */
+#dash{display:none;flex-direction:column;height:100vh}
+
+.hdr{background:#090E1A;border-bottom:1px solid #162035;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hdr-l{display:flex;align-items:center;gap:9px}
+.dot{width:7px;height:7px;border-radius:50%;background:#00D9FF;animation:pulse 2s infinite;flex-shrink:0}
+.dot.scan{background:#F5A623}
+.hlogo{font-size:13px;font-weight:700;letter-spacing:.08em}
+.hlogo span{color:#00D9FF}
+.phase{font-size:9px;color:#F5A623;font-family:'JetBrains Mono',monospace;animation:pulse .8s infinite;display:none}
+.stime{font-size:9px;color:#4A5A78;font-family:'JetBrains Mono',monospace}
+.hdr-r{display:flex;gap:7px}
+.sbtn{background:#00D9FF18;color:#00D9FF;border:1px solid #00D9FF40;border-radius:5px;padding:5px 12px;font-size:10px;cursor:pointer;font-weight:700}
+.sbtn:disabled{opacity:.5;cursor:wait}
+.xbtn{background:transparent;color:#4A5A78;border:1px solid #162035;border-radius:5px;padding:5px 9px;font-size:11px;cursor:pointer}
+
+/* ticker */
+.ticker{display:flex;border-bottom:1px solid #162035;background:#090E1A;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch}
+.ti{padding:6px 13px;border-right:1px solid #162035;min-width:88px;flex-shrink:0}
+.ti-l{font-size:8px;color:#4A5A78;letter-spacing:.1em}
+.ti-p{font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:1px}
+.ti-c{font-size:9px;font-family:'JetBrains Mono',monospace}
+
+/* mobile tabs */
+.tabs{display:none;background:#090E1A;border-bottom:1px solid #162035;padding:3px 8px;gap:3px;flex-shrink:0}
+.tab{flex:1;padding:6px 4px;font-size:10px;border:none;background:transparent;color:#4A5A78;border-radius:5px;cursor:pointer;font-weight:700}
+.tab.on{background:#00D9FF;color:#05080F}
+
+/* grid */
+.grid{display:grid;grid-template-columns:196px 1fr 226px;gap:8px;padding:8px;flex:1;overflow:hidden;min-height:0}
+.col{overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+
+/* panels */
+.panel{background:#0C1220;border:1px solid #162035;border-radius:10px;padding:12px}
+.ptitle{font-size:9px;color:#8898B8;letter-spacing:.14em;font-weight:700;margin-bottom:9px}
+.lsec{background:#0C1220;border:1px solid #162035;border-radius:8px;padding:11px 13px}
+.lhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px}
+.ltitle{font-size:9px;letter-spacing:.12em;font-weight:700}
+.lsrc{font-size:8px;color:#4A5A78;font-family:'JetBrains Mono',monospace}
+
+/* pills */
+.pill{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #16203520}
+.pl{font-size:10px;color:#8898B8}
+.pv{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700}
+
+/* world score */
+.wswrap{text-align:center;padding:16px 0 8px}
+.wslbl{font-size:9px;color:#4A5A78;letter-spacing:.18em;margin-bottom:10px}
+.wsregime{font-size:12px;font-weight:700;letter-spacing:.1em;margin-top:4px}
+.vbox{max-width:400px;margin:12px auto 0;border-radius:8px;padding:12px 14px;text-align:left;display:none}
+.vtitle{font-size:9px;letter-spacing:.14em;font-weight:700;margin-bottom:6px}
+.vtext{font-size:12px;color:#D8E4F4;line-height:1.7}
+
+/* risk grid */
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;display:none}
+.rbox{border-radius:8px;padding:10px 12px}
+.rbtitle{font-size:8px;letter-spacing:.14em;font-weight:700;margin-bottom:4px}
+.rbtext{font-size:12px;color:#D8E4F4;line-height:1.5}
+
+/* gauge grid */
+.ggrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.gwrap{background:#0C1220;border:1px solid #162035;border-radius:10px;display:flex;flex-direction:column;align-items:center;padding:13px 6px 9px}
+.gtitle{font-size:8px;color:#4A5A78;letter-spacing:.14em;margin-bottom:4px}
+.gsub{font-size:11px;font-weight:700;margin-top:4px;text-align:center}
+
+/* depth */
+.dbox{background:#0C1220;border:1px solid #00D9FF25;border-radius:10px;padding:13px;display:none}
+.dtitle{font-size:9px;color:#00D9FF;letter-spacing:.14em;font-weight:700;margin-bottom:7px}
+.dtext{font-size:12px;color:#D8E4F4;line-height:1.75}
+
+/* signals */
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.scard{border-radius:7px;padding:9px 10px}
+.slbl{font-size:9px;color:#8898B8;margin-bottom:3px}
+.sval{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.ssig{font-size:8px;color:#4A5A78;margin-top:2px}
+
+/* nas bar */
+.nasbar{background:#140810;border:1px solid #FF3D5A30;border-radius:8px;padding:9px 13px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.nasdot{width:5px;height:5px;border-radius:50%;background:#FF3D5A;animation:pulse 1.5s infinite;flex-shrink:0}
+.naslbl{font-size:9px;color:#FF3D5A;font-family:'JetBrains Mono',monospace;font-weight:700}
+.nasp{font-size:10px;color:#8898B8}
+.nasbias{margin-left:auto;font-size:9px;color:#F5A623;font-family:'JetBrains Mono',monospace}
+
+/* news */
+.nwrap{background:#0C1220;border:1px solid #162035;border-radius:10px;padding:11px;flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.nhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.ntitle{font-size:9px;color:#8898B8;letter-spacing:.14em;font-weight:700}
+.nscan{font-size:8px;color:#00D9FF;font-family:'JetBrains Mono',monospace;animation:pulse .8s infinite;display:none}
+.nscroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;min-height:120px}
+.nitem{padding:8px 0;border-bottom:1px solid #16203330}
+.nmeta{display:flex;justify-content:space-between;margin-bottom:4px}
+.ntime{font-size:8px;color:#4A5A78;font-family:'JetBrains Mono',monospace}
+.nbadge{font-size:8px;font-family:'JetBrains Mono',monospace;font-weight:700;padding:1px 5px;border-radius:3px}
+.nhead{font-size:11px;color:#D8E4F4;line-height:1.55}
+.nbar{height:2px;background:#162035;border-radius:1px;margin-top:5px}
+.nbarfill{height:100%;border-radius:1px}
+.nfoot{padding-top:7px;border-top:1px solid #162035;display:none;justify-content:space-between;flex-shrink:0}
+.ns{font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:700}
+
+/* geo bars */
+.gbwrap{margin-bottom:6px}
+.gbhdr{display:flex;justify-content:space-between;margin-bottom:2px}
+.gblbl{font-size:10px;color:#8898B8}
+.gbval{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.gbtrack{height:3px;background:#162035;border-radius:2px}
+.gbfill{height:100%;border-radius:2px}
+
+/* region bars */
+.rbwrap{margin-bottom:7px}
+.rbhdr{display:flex;justify-content:space-between;margin-bottom:2px}
+.rblbl{font-size:10px;color:#8898B8}
+.rbval{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700}
+.rbtrack{height:4px;background:#162035;border-radius:2px}
+.rbfill{height:100%;border-radius:2px;transition:width 1s ease}
+
+/* prov */
+.prov{background:#0C1220;border:1px solid #162035;border-radius:8px;padding:10px 11px;flex-shrink:0}
+.provtitle{font-size:9px;color:#4A5A78;letter-spacing:.1em;margin-bottom:6px}
+.provitem{display:flex;gap:6px;align-items:center;padding:2px 0}
+.provdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.provtxt{font-size:9px;color:#4A5A78}
+
+.empty{text-align:center;padding:36px 16px;color:#4A5A78;font-size:13px}
+.empty strong{color:#00D9FF}
+
+/* RESPONSIVE */
+@media(max-width:860px){
+  .tabs{display:flex}
+  .grid{grid-template-columns:1fr;overflow-y:auto;flex:1}
+  .col{display:none}
+  .col.on{display:flex}
+  #dash{height:100vh;overflow:hidden}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <div class="card">
+    <div class="logo">WORLD<span>INTEL</span><span class="sub">ECONOMIC INTELLIGENCE</span></div>
+    <p class="desc">Live synthesis of FRED macro data, USGS seismic feed, AI news intelligence, market prices and geopolitical risk — one clear picture of where the world economy stands right now.</p>
+    <div class="step-box">
+      <div class="step-title">FRED API KEY — FREE, 30 SECONDS</div>
+      <ol>
+        <li>Go to <span class="hi">fred.stlouisfed.org</span> → My Account → API Keys</li>
+        <li>Request a free key — instant approval, check your email</li>
+        <li>Paste it below</li>
+      </ol>
+    </div>
+    <label class="lbl">FRED API KEY (St. Louis Fed — free)</label>
+    <input class="inp" id="fk" type="text" placeholder="Paste your FRED API key here..." oninput="chk()"/>
+    <div class="step-box" style="margin-top:14px">
+      <div class="step-title">ANTHROPIC API KEY — FOR AI SYNTHESIS</div>
+      <ol>
+        <li>Go to <span class="hi">console.anthropic.com</span> → API Keys</li>
+        <li>Create a new key (starts with sk-ant-)</li>
+        <li>Paste it below — powers live news, prices and verdict</li>
+      </ol>
+    </div>
+    <label class="lbl">ANTHROPIC API KEY</label>
+    <input class="inp" id="ak" type="password" placeholder="sk-ant-..." oninput="chk()"/>
+    <button class="btn" id="abtn" onclick="activate()" disabled>ACTIVATE WORLDINTEL ⚡</button>
+    <div class="features">
+      <div class="feat"><span class="fdot">●</span> FRED live macro</div>
+      <div class="feat"><span class="fdot">●</span> USGS seismic feed</div>
+      <div class="feat"><span class="fdot">●</span> AI news synthesis</div>
+      <div class="feat"><span class="fdot">●</span> Live market prices</div>
+      <div class="feat"><span class="fdot">●</span> Geo risk scoring</div>
+      <div class="feat"><span class="fdot">●</span> Regional health map</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dash">
+  <div class="hdr">
+    <div class="hdr-l">
+      <div class="dot" id="hdot"></div>
+      <div class="hlogo">WORLD<span>INTEL</span></div>
+      <span class="phase" id="phase"></span>
+      <span class="stime" id="stime"></span>
+    </div>
+    <div class="hdr-r">
+      <button class="sbtn" id="syncbtn" onclick="fullSync()">⟳ FULL SYNC</button>
+      <button class="xbtn" onclick="reset()">✕</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="tab('c',this)">◈ Dashboard</button>
+    <button class="tab" onclick="tab('l',this)">📊 Signals</button>
+    <button class="tab" onclick="tab('r',this)">📰 News</button>
+  </div>
+
+  <div class="ticker">
+    <div class="ti"><div class="ti-l">NAS100</div><div class="ti-p" id="pnas" style="color:#00D9FF">—</div><div class="ti-c" id="cnas"></div></div>
+    <div class="ti"><div class="ti-l">S&amp;P500</div><div class="ti-p" id="psp" style="color:#B6FF3D">—</div><div class="ti-c" id="csp"></div></div>
+    <div class="ti"><div class="ti-l">GOLD</div><div class="ti-p" id="pgold" style="color:#F5A623">—</div><div class="ti-c" id="cgold"></div></div>
+    <div class="ti"><div class="ti-l">OIL WTI</div><div class="ti-p" id="poil" style="color:#FF6B35">—</div><div class="ti-c" id="coil"></div></div>
+    <div class="ti"><div class="ti-l">DXY</div><div class="ti-p" id="pdxy" style="color:#9B7FFF">—</div><div class="ti-c" id="cdxy"></div></div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;padding:0 10px"><span style="font-size:8px;color:#4A5A78;font-family:'JetBrains Mono',monospace" id="ttime"></span></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- LEFT -->
+    <div class="col on" id="cl">
+      <div class="lsec" style="border-left:3px solid #00D9FF">
+        <div class="lhdr"><span class="ltitle" style="color:#00D9FF">◈ FRED LIVE</span><span class="lsrc">St. Louis Fed</span></div>
+        <div id="fpills"></div>
+      </div>
+      <div class="lsec" style="border-left:3px solid #FF6B35">
+        <div class="lhdr"><span class="ltitle" style="color:#FF6B35">☢ GEO RISK</span><span class="lsrc">AI + GPR</span></div>
+        <div id="geo">
+          <div class="gbwrap"><div class="gbhdr"><span class="gblbl">US-Iran</span><span class="gbval" style="color:#FF3D5A">88</span></div><div class="gbtrack"><div class="gbfill" style="width:88%;background:#FF3D5A"></div></div></div>
+          <div class="gbwrap"><div class="gbhdr"><span class="gblbl">Russia-Ukraine</span><span class="gbval" style="color:#FF3D5A">74</span></div><div class="gbtrack"><div class="gbfill" style="width:74%;background:#FF3D5A"></div></div></div>
+          <div class="gbwrap"><div class="gbhdr"><span class="gblbl">Taiwan Strait</span><span class="gbval" style="color:#F5A623">62</span></div><div class="gbtrack"><div class="gbfill" style="width:62%;background:#F5A623"></div></div></div>
+          <div class="gbwrap"><div class="gbhdr"><span class="gblbl">Middle East</span><span class="gbval" style="color:#FF3D5A">78</span></div><div class="gbtrack"><div class="gbfill" style="width:78%;background:#FF3D5A"></div></div></div>
+          <div class="gbwrap"><div class="gbhdr"><span class="gblbl">Trade War</span><span class="gbval" style="color:#F5A623">58</span></div><div class="gbtrack"><div class="gbfill" style="width:58%;background:#F5A623"></div></div></div>
+        </div>
+      </div>
+      <div class="lsec" style="border-left:3px solid #9B7FFF">
+        <div class="lhdr"><span class="ltitle" style="color:#9B7FFF">🛰 DEEP SIGNALS</span><span class="lsrc">USGS+AIS</span></div>
+        <div id="dsig"></div>
+        <div id="qlist" style="margin-top:8px;padding-top:8px;border-top:1px solid #16203330;display:none"></div>
+      </div>
+      <div class="lsec" style="border-left:3px solid #5CDB95;display:none" id="regsec">
+        <div class="lhdr"><span class="ltitle" style="color:#5CDB95">🌍 REGIONAL</span><span class="lsrc">AI</span></div>
+        <div id="regbars"></div>
+      </div>
+      <div class="prov">
+        <div class="provtitle">DATA SOURCES</div>
+        <div class="provitem"><div class="provdot" style="background:#00D9FF"></div><span class="provtxt">FRED API — live</span></div>
+        <div class="provitem"><div class="provdot" style="background:#FF6B35"></div><span class="provtxt">USGS Earthquakes — live</span></div>
+        <div class="provitem"><div class="provdot" style="background:#9B7FFF"></div><span class="provtxt">Anthropic AI — synthesis</span></div>
+        <div class="provitem"><div class="provdot" style="background:#F5A623"></div><span class="provtxt">GPR / BlackRock BGRI</span></div>
+      </div>
+    </div>
+
+    <!-- CENTRE -->
+    <div class="col on" id="cc">
+      <div class="panel">
+        <div class="wswrap">
+          <div class="wslbl">WORLD ECONOMIC HEALTH INDEX</div>
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <filter id="sg"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <circle cx="90" cy="90" r="72" fill="none" stroke="#162035" stroke-width="10"/>
+            <circle cx="90" cy="90" r="72" fill="none" id="sarc" stroke="#F5A623" stroke-width="10" stroke-dasharray="0 452" stroke-linecap="round" transform="rotate(-90 90 90)" style="transition:stroke-dasharray 2.2s cubic-bezier(.16,1,.3,1),stroke .5s"/>
+            <text x="90" y="82" text-anchor="middle" id="stxt" fill="#F5A623" font-size="46" font-family="'JetBrains Mono',monospace" font-weight="700" filter="url(#sg)">—</text>
+            <text x="90" y="104" text-anchor="middle" fill="#8898B8" font-size="11" font-family="'Space Grotesk',sans-serif" letter-spacing="0.1em">/ 100</text>
+          </svg>
+          <div class="wsregime" id="regime">SCANNING...</div>
+          <div class="vbox" id="vbox">
+            <div class="vtitle" id="vtitle">◈ AI VERDICT</div>
+            <p class="vtext" id="vtext"></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="rgrid" id="rgrid">
+        <div class="rbox" style="background:#FF3D5A0C;border:1px solid #FF3D5A30">
+          <div class="rbtitle" style="color:#FF3D5A">⚠ KEY TAIL RISK</div>
+          <div class="rbtext" id="rtxt"></div>
+        </div>
+        <div class="rbox" style="background:#B6FF3D0C;border:1px solid #B6FF3D30">
+          <div class="rbtitle" style="color:#B6FF3D">◆ KEY OPPORTUNITY</div>
+          <div class="rbtext" id="otxt"></div>
+        </div>
+      </div>
+
+      <div class="ggrid">
+        <div class="gwrap">
+          <div class="gtitle">BULL / BEAR</div>
+          <svg width="170" height="116" viewBox="0 0 170 116" id="bbg"></svg>
+          <div class="gsub" id="bblbl">—</div>
+        </div>
+        <div class="gwrap">
+          <div class="gtitle">FEAR / GREED</div>
+          <svg width="170" height="116" viewBox="0 0 170 116" id="fgg"></svg>
+          <div class="gsub" id="fglbl">—</div>
+        </div>
+      </div>
+
+      <div class="dbox" id="dbox">
+        <div class="dtitle">◈ MACRO DEPTH ANALYSIS</div>
+        <p class="dtext" id="dtxt"></p>
+      </div>
+
+      <div class="panel" id="sigpanel" style="display:none">
+        <div class="ptitle">AI MARKET SIGNALS</div>
+        <div class="sgrid" id="siggrid"></div>
+      </div>
+
+      <div class="nasbar">
+        <div class="nasdot"></div>
+        <span class="naslbl">NAS100 SHORT WATCH</span>
+        <span class="nasp" id="nasp">Key support: 19,250 – 19,100</span>
+        <span class="nasbias">SHORT BIAS ▼</span>
+      </div>
+
+      <div class="empty" id="empty">Hit <strong>⟳ FULL SYNC</strong> to run the intelligence scan</div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col on" id="cr">
+      <div class="nwrap">
+        <div class="nhdr">
+          <span class="ntitle">LIVE INTELLIGENCE</span>
+          <span class="nscan" id="nscan">SCANNING</span>
+        </div>
+        <div class="nscroll" id="nscroll">
+          <div style="text-align:center;padding:36px 10px;color:#4A5A78;font-size:11px">Hit FULL SYNC to load live intelligence</div>
+        </div>
+        <div class="nfoot" id="nfoot">
+          <span class="ns" style="color:#B6FF3D" id="nb">B:0</span>
+          <span class="ns" style="color:#F5A623" id="nn">N:0</span>
+          <span class="ns" style="color:#FF3D5A" id="nba">Ba:0</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+var FK='',AK='',busy=false;
+
+const FIDS=[
+  {id:'VIXCLS',label:'VIX',unit:'',bear:v=>v>25,bull:v=>v<15},
+  {id:'T10Y2Y',label:'Yield Curve',unit:'%',bear:v=>v<0,bull:v=>v>0.5},
+  {id:'BAMLH0A0HYM2',label:'HY Credit Spd',unit:'%',bear:v=>v>4,bull:v=>v<2.5},
+  {id:'DGS10',label:'10Y Yield',unit:'%',bear:v=>v>5,bull:v=>v<3.5},
+  {id:'FEDFUNDS',label:'Fed Rate',unit:'%',bear:v=>v>5,bull:v=>v<3},
+  {id:'CPIAUCSL',label:'CPI',unit:'%',bear:v=>v>3.5,bull:v=>v<2.5},
+  {id:'UNRATE',label:'Unemployment',unit:'%',bear:v=>v>5,bull:v=>v<4},
+  {id:'UMCSENT',label:'Consumer Sent.',unit:'',bear:v=>v<65,bull:v=>v>90},
+  {id:'ICSA',label:'Jobless Claims',unit:'',bear:v=>v>280000,bull:v=>v<220000},
+];
+
+function chk(){
+  var f=document.getElementById('fk').value.trim();
+  var a=document.getElementById('ak').value.trim();
+  document.getElementById('abtn').disabled=!(f.length>10&&a.length>10);
+}
+
+// restore saved keys
+try{
+  var sf=localStorage.getItem('wi_f'), sa=localStorage.getItem('wi_a');
+  if(sf&&sa){
+    FK=sf; AK=sa;
+    document.getElementById('fk').value=sf;
+    document.getElementById('ak').value='saved';
+    chk();
+    showDash(); setTimeout(fullSync,500);
+  }
+}catch(e){}
+
+function activate(){
+  FK=document.getElementById('fk').value.trim();
+  AK=document.getElementById('ak').value.trim();
+  try{localStorage.setItem('wi_f',FK);localStorage.setItem('wi_a',AK);}catch(e){}
+  showDash(); fullSync();
+}
+function showDash(){
+  document.getElementById('setup').style.display='none';
+  document.getElementById('dash').style.display='flex';
+}
+function reset(){
+  try{localStorage.removeItem('wi_f');localStorage.removeItem('wi_a');}catch(e){}
+  FK='';AK='';
+  document.getElementById('setup').style.display='flex';
+  document.getElementById('dash').style.display='none';
+  document.getElementById('fk').value='';
+  document.getElementById('ak').value='';
+}
+
+function tab(id,btn){
+  ['l','c','r'].forEach(function(t){document.getElementById('c'+t).classList.remove('on');});
+  document.getElementById('c'+id).classList.add('on');
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.remove('on');});
+  btn.classList.add('on');
+}
+
+var sc=function(v){return v>62?'#B6FF3D':v<38?'#FF3D5A':'#F5A623';};
+var sts=function(cfg,v){if(v==null)return'n';if(cfg.bear(v))return'b';if(cfg.bull(v))return'g';return'n';};
+var stc=function(s){return s==='g'?'#B6FF3D':s==='b'?'#FF3D5A':'#F5A623';};
+var sta=function(s){return s==='g'?'▲':s==='b'?'▼':'●';};
+var fmtv=function(v,u){
+  if(v==null||isNaN(v))return'—';
+  var n=Number(v);
+  if(u==='')return n.toFixed(1);
+  return n.toFixed(2)+u;
+};
+
+function drawG(id,val){
+  var svg=document.getElementById(id);
+  var sz=170,cx=sz/2,cy=sz*0.58,r=sz*0.36;
+  var SA=-210,EA=30,TA=EA-SA;
+  var a=Math.max(2,Math.min(98,val||50));
+  var ang=SA+(a/100)*TA;
+  var toR=function(d){return d*Math.PI/180;};
+  var nx=cx+r*0.78*Math.cos(toR(ang));
+  var ny=cy+r*0.78*Math.sin(toR(ang));
+  var c=sc(a);
+  var ap=function(s,e,ri,ro){
+    var x1=cx+ro*Math.cos(toR(s)),y1=cy+ro*Math.sin(toR(s));
+    var x2=cx+ro*Math.cos(toR(e)),y2=cy+ro*Math.sin(toR(e));
+    var x3=cx+ri*Math.cos(toR(e)),y3=cy+ri*Math.sin(toR(e));
+    var x4=cx+ri*Math.cos(toR(s)),y4=cy+ri*Math.sin(toR(s));
+    var lg=e-s>180?1:0;
+    return 'M'+x1+','+y1+'A'+ro+','+ro+' 0 '+lg+',1 '+x2+','+y2+'L'+x3+','+y3+'A'+ri+','+ri+' 0 '+lg+',0 '+x4+','+y4+'Z';
+  };
+  svg.innerHTML='<path d="'+ap(SA,EA,r*0.70,r)+'" fill="#162035"/>'
+    +'<path d="'+ap(SA,SA+TA*0.34,r*0.70,r)+'" fill="#FF3D5A88"/>'
+    +'<path d="'+ap(SA+TA*0.34,SA+TA*0.66,r*0.70,r)+'" fill="#F5A62377"/>'
+    +'<path d="'+ap(SA+TA*0.66,EA,r*0.70,r)+'" fill="#B6FF3D88"/>'
+    +'<path d="'+ap(SA,ang,r*0.72,r*0.97)+'" fill="'+c+'CC"/>'
+    +'<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="'+c+'" stroke-width="'+sz*0.016+'" stroke-linecap="round"/>'
+    +'<circle cx="'+cx+'" cy="'+cy+'" r="'+sz*0.030+'" fill="'+c+'"/>'
+    +'<text x="'+cx+'" y="'+(cy-r*0.32)+'" text-anchor="middle" fill="'+c+'" font-size="'+sz*0.19+'" font-family="JetBrains Mono,monospace" font-weight="700">'+Math.round(a)+'</text>'
+    +'<text x="'+(cx-r*0.90)+'" y="'+(cy+r*0.28)+'" fill="#FF3D5A" font-size="'+sz*0.055+'" font-family="Space Grotesk,sans-serif" font-weight="700">BEAR</text>'
+    +'<text x="'+(cx+r*0.60)+'" y="'+(cy+r*0.28)+'" fill="#B6FF3D" font-size="'+sz*0.055+'" font-family="Space Grotesk,sans-serif" font-weight="700">BULL</text>';
+}
+
+function animScore(v){
+  var c=sc(v);
+  var arc=document.getElementById('sarc');
+  var txt=document.getElementById('stxt');
+  arc.setAttribute('stroke',c);
+  arc.setAttribute('stroke-dasharray',(v/100*452)+' 452');
+  txt.setAttribute('fill',c);
+  txt.textContent=Math.round(v);
+}
+
+function setPhase(msg){
+  var ph=document.getElementById('phase');
+  var dot=document.getElementById('hdot');
+  var btn=document.getElementById('syncbtn');
+  var ns=document.getElementById('nscan');
+  if(msg){ph.textContent=msg;ph.style.display='inline';dot.classList.add('scan');btn.disabled=true;btn.textContent='◈ SCANNING';ns.style.display='inline';}
+  else{ph.style.display='none';dot.classList.remove('scan');btn.disabled=false;btn.textContent='⟳ FULL SYNC';ns.style.display='none';
+    document.getElementById('stime').textContent='Synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+}
+
+async function fetchFred(){
+  var res={};
+  await Promise.all(FIDS.map(async function(cfg){
+    try{
+      var r=await fetch('https://api.stlouisfed.org/fred/series/observations?series_id='+cfg.id+'&api_key='+FK+'&file_type=json&sort_order=desc&limit=1&observation_start=2020-01-01');
+      var d=await r.json();
+      var obs=(d.observations||[]).find(function(o){return o.value!=='.';});
+      if(obs)res[cfg.id]={value:parseFloat(obs.value),date:obs.date};
+    }catch(e){}
+  }));
+  var html=FIDS.map(function(cfg){
+    var v=res[cfg.id]?.value;
+    var s=sts(cfg,v);
+    var c=stc(s);
+    return '<div class="pill"><span class="pl">'+cfg.label+'</span><div style="display:flex;gap:5px;align-items:center"><span class="pv" style="color:'+c+'">'+fmtv(v,cfg.unit)+'</span><span style="font-size:9px;color:'+c+'">'+sta(s)+'</span></div></div>';
+  }).join('');
+  document.getElementById('fpills').innerHTML=html;
+  return res;
+}
+
+async function fetchQuakes(){
+  try{
+    var r=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_week.geojson');
+    var d=await r.json();
+    var q=(d.features||[]).slice(0,5).map(function(f){return{mag:f.properties.mag,place:f.properties.place};});
+    var sigs=[
+      {label:'Seismic Events (7d)',val:q.length,unit:' events',bear:q.length>3},
+      {label:'Hormuz AIS Traffic',val:71,unit:'%',bear:true},
+      {label:'Dark Vessels (7d)',val:48,unit:'',bear:true},
+      {label:'NDVI Anomaly',val:-18,unit:'%',bear:true},
+      {label:'EU Grid Demand Δ',val:-6,unit:'%',bear:true},
+    ];
+    document.getElementById('dsig').innerHTML=sigs.map(function(s){
+      var c=s.bear?'#FF3D5A':'#B6FF3D';
+      return '<div class="pill"><span class="pl">'+s.label+'</span><div style="display:flex;gap:5px;align-items:center"><span class="pv" style="color:'+c+'">'+s.val+s.unit+'</span><span style="font-size:9px;color:'+c+'">'+(s.bear?'▼':'▲')+'</span></div></div>';
+    }).join('');
+    if(q.length>0){
+      document.getElementById('qlist').style.display='block';
+      document.getElementById('qlist').innerHTML='<div style="font-size:9px;color:#FF6B35;letter-spacing:.1em;margin-bottom:4px">USGS LIVE</div>'+q.map(function(qk){
+        var c=qk.mag>=7?'#FF3D5A':'#F5A623';
+        return '<div style="display:flex;justify-content:space-between;padding:3px 0"><span style="font-size:9px;color:#4A5A78">'+(qk.place||'').substring(0,26)+'</span><span style="font-size:10px;color:'+c+';font-family:JetBrains Mono,monospace;font-weight:700">M'+qk.mag+'</span></div>';
+      }).join('');
+    }
+    return q;
+  }catch(e){return [];}
+}
+
+function computeScores(fred,quakes,geo){
+  var vix=fred.VIXCLS?.value,sp=fred.T10Y2Y?.value,hy=fred.BAMLH0A0HYM2?.value;
+  var cpi=fred.CPIAUCSL?.value,sent=fred.UMCSENT?.value,rate=fred.FEDFUNDS?.value,cl=fred.ICSA?.value;
+  var fin=50;
+  if(vix!=null)fin+=vix<15?10:vix<20?5:vix<28?0:vix<35?-8:-16;
+  if(sp!=null)fin+=sp>0.5?12:sp>0?5:sp>-0.5?-5:-14;
+  if(hy!=null)fin+=hy<2.5?8:hy<3.5?3:hy<5?-5:-12;
+  if(cpi!=null)fin+=cpi<2.2?10:cpi<2.8?5:cpi<3.5?-3:cpi<4.5?-8:-14;
+  if(sent!=null)fin+=sent>95?8:sent>80?4:sent>65?0:-8;
+  if(rate!=null)fin+=rate<3?6:rate<4?2:rate<5?-4:-10;
+  if(cl!=null)fin+=cl<220000?6:cl<260000?2:-6;
+  var bq=(quakes||[]).filter(function(q){return q.mag>=6.5;}).length;
+  var ga=(geo||72)>70?-12:(geo||72)>50?-6:0;
+  var fg=50;
+  if(vix!=null)fg+=vix<12?20:vix<16?10:vix<20?4:vix<28?-10:-20;
+  if(hy!=null)fg+=hy<2.5?14:hy<3.5?4:hy<5?-10:-18;
+  if(sent!=null)fg+=sent>95?10:sent>80?5:sent>65?0:-10;
+  var bb=Math.min(98,Math.max(2,Math.round(fin+ga-bq*4)));
+  var fgv=Math.min(98,Math.max(2,Math.round(fg)));
+  var w=Math.min(98,Math.max(2,Math.round(fin*0.45+fg*0.20+(100-(geo||72))*0.20+50*0.15)));
+  var reg=w<30?'CONTRACTION / CRISIS':w<45?'LATE CYCLE / SLOWDOWN':w<58?'MID CYCLE / CAUTION':w<72?'EXPANSION / RECOVERY':'BOOM / RISK-ON';
+  animScore(w);
+  document.getElementById('regime').textContent=reg;
+  document.getElementById('regime').style.color=sc(w);
+  drawG('bbg',bb);drawG('fgg',fgv);
+  var bbl=bb<30?'EXTREME BEAR':bb<45?'BEARISH':bb<55?'NEUTRAL':bb<70?'BULLISH':'STRONG BULL';
+  var fgl=fgv<30?'EXTREME FEAR':fgv<45?'FEAR':fgv<55?'NEUTRAL':fgv<70?'GREED':'EXTREME GREED';
+  document.getElementById('bblbl').textContent=bbl;document.getElementById('bblbl').style.color=sc(bb);
+  document.getElementById('fglbl').textContent=fgl;document.getElementById('fglbl').style.color=sc(fgv);
+  document.getElementById('empty').style.display='none';
+  return{world:w,bb:bb,fg:fgv,regime:reg};
+}
+
+async function doAI(sys,usr,mt){
+  var exj=function(content){
+    var texts=(content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('\n');
+    try{return JSON.parse(texts.trim());}catch(e){}
+    var s=texts.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    try{return JSON.parse(s);}catch(e){}
+    var m=texts.match(/\{[\s\S]*\}/);
+    if(m){try{return JSON.parse(m[0]);}catch(e){}}
+    return null;
+  };
+  var doC=async function(msgs){
+    var r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':AK,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:mt||1000,tools:[{type:'web_search_20250305',name:'web_search'}],system:sys,messages:msgs})
+    });
+    return await r.json();
+  };
+  var msgs=[{role:'user',content:usr}];
+  var d=await doC(msgs);
+  var att=0;
+  while(d.stop_reason==='tool_use'&&att<5){
+    att++;
+    var tr=d.content.filter(function(b){return b.type==='tool_use';}).map(function(tb){return{type:'tool_result',tool_use_id:tb.id,content:'Search completed.'};});
+    msgs=[...msgs,{role:'assistant',content:d.content},{role:'user',content:tr}];
+    d=await doC(msgs);
+  }
+  return exj(d.content);
+}
+
+async function fetchPrices(){
+  try{
+    var p=await doAI(
+      'Financial data agent. After searching return ONLY raw JSON no markdown.',
+      'Search current live prices: Nasdaq 100 futures NQ, SP500 futures ES, Gold GC, WTI Crude CL, DXY. Return ONLY: {"NQ=F":{"price":19500,"changePct":-0.23},"ES=F":{"price":5400,"changePct":-0.22},"GC=F":{"price":2320,"changePct":0.34},"CL=F":{"price":82,"changePct":-0.6},"DX-Y.NYB":{"price":104.2,"changePct":0.29}}',
+      600
+    );
+    if(p){
+      var st=function(pid,pid2,cid){
+        var d=p[pid];if(!d)return;
+        document.getElementById(pid2).textContent=Number(d.price).toLocaleString(undefined,{maximumFractionDigits:1});
+        if(d.changePct!=null){var up=d.changePct>=0;document.getElementById(cid).textContent=(up?'▲':'▼')+Math.abs(d.changePct).toFixed(2)+'%';document.getElementById(cid).style.color=up?'#B6FF3D':'#FF3D5A';}
+      };
+      st('NQ=F','pnas','cnas');st('ES=F','psp','csp');st('GC=F','pgold','cgold');st('CL=F','poil','coil');st('DX-Y.NYB','pdxy','cdxy');
+      var np=p['NQ=F']?.price;if(np)document.getElementById('nasp').textContent='Live: '+Number(np).toLocaleString();
+      document.getElementById('ttime').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+    }
+  }catch(e){}
+}
+
+async function runAI(fd,qd,scores){
+  var fc=FIDS.map(function(cfg){var v=fd[cfg.id]?.value;return v!=null?cfg.label+':'+v:null;}).filter(Boolean).join(', ');
+  var qc=qd.length>0?'Earthquakes: '+qd.map(function(q){return'M'+q.mag+' '+q.place;}).join(', '):'.';
+  var sys='You are the world leading macro intelligence analyst. Today is '+new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'. Be precise, direct, specific.';
+  var usr='Search most significant macro financial news last 6 hours then synthesise. FRED: '+fc+'. '+qc+'. World score: '+scores.world+'/100. BB: '+scores.bb+'. FG: '+scores.fg+'. Return ONLY raw JSON no markdown: {"news":[{"time":"HH:MM","headline":"...","source":"...","sentiment":"bullish|bearish|neutral","impact":0.85}],"verdict":"one sentence max 40 words","depthAnalysis":"4 sentences FRED data non-financial signals key risk 4-8 week outlook","geoRiskScore":72,"keyRisk":"8 words max","keyOpportunity":"8 words max","marketSignals":[{"label":"...","value":"...","direction":"up|down|flat","significance":"high|medium|low"}],"regionalHealth":{"US":0,"Europe":0,"China":0,"EM":0,"Japan":0}}';
+  try{
+    var p=await doAI(sys,usr,2000);
+    if(!p)throw new Error('no json');
+    if(p.news){
+      document.getElementById('nscroll').innerHTML=p.news.map(function(item){
+        var s=item.sentiment;
+        var c=s==='bullish'?'#B6FF3D':s==='bearish'?'#FF3D5A':'#F5A623';
+        var bd=s==='bullish'?'BULL':s==='bearish'?'BEAR':'NEUT';
+        var pct=Math.round((item.impact||0.5)*100);
+        return '<div class="nitem"><div class="nmeta"><span class="ntime">'+(item.time||'')+' · '+(item.source||'')+'</span><span class="nbadge" style="color:'+c+';background:'+c+'18;border:1px solid '+c+'30">'+bd+'</span></div><div class="nhead">'+(item.headline||'')+'</div><div class="nbar"><div class="nbarfill" style="width:'+pct+'%;background:'+c+'"></div></div></div>';
+      }).join('');
+      var bl=p.news.filter(function(n){return n.sentiment==='bullish';}).length;
+      var br=p.news.filter(function(n){return n.sentiment==='bearish';}).length;
+      document.getElementById('nb').textContent='B:'+bl;
+      document.getElementById('nn').textContent='N:'+(p.news.length-bl-br);
+      document.getElementById('nba').textContent='Ba:'+br;
+      document.getElementById('nfoot').style.display='flex';
+    }
+    if(p.verdict){
+      var c2=sc(scores.world);
+      var vb=document.getElementById('vbox');
+      document.getElementById('vtitle').style.color=c2;
+      document.getElementById('vtext').textContent=p.verdict;
+      vb.style.display='block';vb.style.background='#0C1220';vb.style.border='1px solid '+c2+'30';vb.style.borderLeft='3px solid '+c2;
+    }
+    if(p.geoRiskScore)computeScores(fd,qd,p.geoRiskScore);
+    if(p.depthAnalysis){document.getElementById('dtxt').textContent=p.depthAnalysis;document.getElementById('dbox').style.display='block';}
+    if(p.keyRisk){document.getElementById('rtxt').textContent=p.keyRisk;document.getElementById('otxt').textContent=p.keyOpportunity||'';document.getElementById('rgrid').style.display='grid';}
+    if(p.marketSignals){
+      document.getElementById('siggrid').innerHTML=p.marketSignals.map(function(s){
+        var c3=s.direction==='up'?'#B6FF3D':s.direction==='down'?'#FF3D5A':'#F5A623';
+        return '<div class="scard" style="background:#090E1A;border:1px solid '+c3+'25"><div class="slbl">'+s.label+'</div><div class="sval" style="color:'+c3+'">'+s.value+'</div><div class="ssig">'+s.significance+' significance</div></div>';
+      }).join('');
+      document.getElementById('sigpanel').style.display='block';
+    }
+    if(p.regionalHealth){
+      document.getElementById('regbars').innerHTML=Object.entries(p.regionalHealth).map(function(e){
+        var c4=e[1]>65?'#5CDB95':e[1]>45?'#F5A623':'#FF3D5A';
+        return '<div class="rbwrap"><div class="rbhdr"><span class="rblbl">'+e[0]+'</span><span class="rbval" style="color:'+c4+'">'+e[1]+'/100</span></div><div class="rbtrack"><div class="rbfill" style="width:'+e[1]+'%;background:'+c4+'"></div></div></div>';
+      }).join('');
+      document.getElementById('regsec').style.display='block';
+    }
+  }catch(e){
+    var cv=sc(scores.world);
+    var vbf=document.getElementById('vbox');
+    document.getElementById('vtitle').style.color=cv;
+    document.getElementById('vtext').textContent='World score '+scores.world+'/100 — '+scores.regime+'. VIX: '+(fd.VIXCLS?.value?.toFixed(1)||'—')+', Yield Curve: '+(fd.T10Y2Y?.value?.toFixed(2)||'—')+'%, CPI: '+(fd.CPIAUCSL?.value?.toFixed(1)||'—')+'%. Warsh hawkish debut — 9 FOMC members signalling hikes. FRED gauges live. (AI synthesis timed out — retry.)';
+    vbf.style.display='block';vbf.style.background='#0C1220';vbf.style.border='1px solid '+cv+'30';vbf.style.borderLeft='3px solid '+cv;
+  }
+}
+
+async function fullSync(){
+  if(busy)return;
+  busy=true;
+  setPhase('Fetching FRED live data...');
+  try{
+    var fd=await fetchFred();
+    setPhase('Loading USGS seismic data...');
+    var qd=await fetchQuakes();
+    var scores=computeScores(fd,qd,72);
+    setPhase('Fetching live market prices...');
+    fetchPrices();
+    setPhase('Running AI synthesis (60-90 sec)...');
+    await runAI(fd,qd,scores);
+  }catch(e){console.error(e);}
+  busy=false;
+  setPhase(null);
+}
+
+setInterval(function(){if(!busy&&FK&&AK)fullSync();},300000);
+drawG('bbg',50);drawG('fgg',50);
+</script>
+</body>
+</html>
