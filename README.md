@@ -372,7 +372,7 @@ const FIDS=[
   {id:'BAMLH0A0HYM2',label:'HY Credit Spd',unit:'%',bear:v=>v>4,bull:v=>v<2.5},
   {id:'DGS10',label:'10Y Yield',unit:'%',bear:v=>v>5,bull:v=>v<3.5},
   {id:'FEDFUNDS',label:'Fed Rate',unit:'%',bear:v=>v>5,bull:v=>v<3},
-  {id:'CPIAUCSL',label:'CPI',unit:'%',bear:v=>v>3.5,bull:v=>v<2.5},
+  {id:'CPILFESL',label:'Core CPI YoY',unit:'%',bear:v=>v>3.5,bull:v=>v<2.5},
   {id:'UNRATE',label:'Unemployment',unit:'%',bear:v=>v>5,bull:v=>v<4},
   {id:'UMCSENT',label:'Consumer Sent.',unit:'',bear:v=>v<65,bull:v=>v>90},
   {id:'ICSA',label:'Jobless Claims',unit:'',bear:v=>v>280000,bull:v=>v<220000},
@@ -429,6 +429,8 @@ var sta=function(s){return s==='g'?'▲':s==='b'?'▼':'●';};
 var fmtv=function(v,u){
   if(v==null||isNaN(v))return'—';
   var n=Number(v);
+  // Jobless claims come in raw numbers like 215000 - format as K
+  if(u===''&&n>10000)return(n/1000).toFixed(0)+'K';
   if(u==='')return n.toFixed(1);
   return n.toFixed(2)+u;
 };
@@ -629,7 +631,31 @@ async function runAI(fd,qd,scores){
   var qc=qd.length>0?'Earthquakes: '+qd.map(function(q){return'M'+q.mag+' '+q.place;}).join(', '):'.';
   var sys='You are the world leading macro intelligence analyst. Today is '+new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'. Be precise, direct, specific.';
   var usr='Search most significant macro financial news last 6 hours then synthesise. FRED: '+fc+'. '+qc+'. World score: '+scores.world+'/100. BB: '+scores.bb+'. FG: '+scores.fg+'. Return ONLY raw JSON no markdown: {"news":[{"time":"HH:MM","headline":"...","source":"...","sentiment":"bullish|bearish|neutral","impact":0.85}],"verdict":"one sentence max 40 words","depthAnalysis":"4 sentences FRED data non-financial signals key risk 4-8 week outlook","geoRiskScore":72,"keyRisk":"8 words max","keyOpportunity":"8 words max","marketSignals":[{"label":"...","value":"...","direction":"up|down|flat","significance":"high|medium|low"}],"regionalHealth":{"US":0,"Europe":0,"China":0,"EM":0,"Japan":0}}';
+
+  var vix=fd.VIXCLS?.value, sp=fd.T10Y2Y?.value, hy=fd.BAMLH0A0HYM2?.value;
+  var cpi=fd.CPILFESL?.value, sent=fd.UMCSENT?.value, rate=fd.FEDFUNDS?.value;
+
+  // Always show FRED-based verdict immediately
+  var fredVerdict='World score '+scores.world+'/100 — '+scores.regime+'. '
+    +(vix!=null?'VIX '+vix.toFixed(1)+' ('+(vix>25?'elevated':'contained')+'), ':'')
+    +(sp!=null?'yield curve '+(sp>=0?'+':'')+sp.toFixed(2)+'% ('+(sp<0?'inverted':'positive')+'), ':'')
+    +(cpi!=null?'core CPI '+cpi.toFixed(1)+'%, ':'')
+    +(rate!=null?'Fed rate '+rate.toFixed(2)+'%. ':'')
+    +(sent!=null?'Consumer sentiment '+sent.toFixed(0)+' ('+(sent<65?'very low — bearish signal':'moderate')+').':'')
+    +' Warsh hawkish debut — 9 FOMC members signalling hikes. FRED data live.';
+
+  var cv=sc(scores.world);
+  var vb=document.getElementById('vbox');
+  document.getElementById('vtitle').style.color=cv;
+  document.getElementById('vtext').textContent=fredVerdict;
+  vb.style.display='block';
+  vb.style.background='#0C1220';
+  vb.style.border='1px solid '+cv+'30';
+  vb.style.borderLeft='3px solid '+cv;
+
+  // Try AI synthesis
   try{
+    setPhase('Running AI news scan...');
     var p=await doAI(sys,usr,2000);
     if(!p)throw new Error('no json');
     if(p.news){
@@ -648,11 +674,7 @@ async function runAI(fd,qd,scores){
       document.getElementById('nfoot').style.display='flex';
     }
     if(p.verdict){
-      var c2=sc(scores.world);
-      var vb=document.getElementById('vbox');
-      document.getElementById('vtitle').style.color=c2;
       document.getElementById('vtext').textContent=p.verdict;
-      vb.style.display='block';vb.style.background='#0C1220';vb.style.border='1px solid '+c2+'30';vb.style.borderLeft='3px solid '+c2;
     }
     if(p.geoRiskScore)computeScores(fd,qd,p.geoRiskScore);
     if(p.depthAnalysis){document.getElementById('dtxt').textContent=p.depthAnalysis;document.getElementById('dbox').style.display='block';}
@@ -672,11 +694,8 @@ async function runAI(fd,qd,scores){
       document.getElementById('regsec').style.display='block';
     }
   }catch(e){
-    var cv=sc(scores.world);
-    var vbf=document.getElementById('vbox');
-    document.getElementById('vtitle').style.color=cv;
-    document.getElementById('vtext').textContent='World score '+scores.world+'/100 — '+scores.regime+'. VIX: '+(fd.VIXCLS?.value?.toFixed(1)||'—')+', Yield Curve: '+(fd.T10Y2Y?.value?.toFixed(2)||'—')+'%, CPI: '+(fd.CPIAUCSL?.value?.toFixed(1)||'—')+'%. Warsh hawkish debut — 9 FOMC members signalling hikes. FRED gauges live. (AI synthesis timed out — retry.)';
-    vbf.style.display='block';vbf.style.background='#0C1220';vbf.style.border='1px solid '+cv+'30';vbf.style.borderLeft='3px solid '+cv;
+    // FRED verdict already shown above - just note AI timed out in news panel
+    document.getElementById('nscroll').innerHTML='<div style="padding:20px;color:#7A8AAA;font-size:11px;text-align:center">AI news scan unavailable — FRED data is live above.<br><br>To enable AI news: ensure your Anthropic key is valid at console.anthropic.com</div>';
   }
 }
 
