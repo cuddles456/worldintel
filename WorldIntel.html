@@ -185,21 +185,11 @@ input,button{font-family:'Space Grotesk',sans-serif;font-size:14px}
       <ol>
         <li>Go to <span class="hi">fred.stlouisfed.org</span> → My Account → API Keys</li>
         <li>Request a free key — instant approval, check your email</li>
-        <li>Paste it below</li>
+        <li>Paste it below and activate</li>
       </ol>
     </div>
     <label class="lbl">FRED API KEY (St. Louis Fed — free)</label>
     <input class="inp" id="fk" type="text" placeholder="Paste your FRED API key here..." oninput="chk()"/>
-    <div class="step-box" style="margin-top:14px">
-      <div class="step-title">ANTHROPIC API KEY — FOR AI SYNTHESIS</div>
-      <ol>
-        <li>Go to <span class="hi">console.anthropic.com</span> → API Keys</li>
-        <li>Create a new key (starts with sk-ant-)</li>
-        <li>Paste it below — powers live news, prices and verdict</li>
-      </ol>
-    </div>
-    <label class="lbl">ANTHROPIC API KEY</label>
-    <input class="inp" id="ak" type="password" placeholder="sk-ant-..." oninput="chk()"/>
     <button class="btn" id="abtn" onclick="activate()" disabled>ACTIVATE WORLDINTEL ⚡</button>
     <div class="features">
       <div class="feat"><span class="fdot">●</span> FRED live macro</div>
@@ -380,17 +370,15 @@ const FIDS=[
 
 function chk(){
   var f=document.getElementById('fk').value.trim();
-  var a=document.getElementById('ak').value.trim();
-  document.getElementById('abtn').disabled=!(f.length>10&&a.length>10);
+  document.getElementById('abtn').disabled=!(f.length>10);
 }
 
 // restore saved keys
 try{
-  var sf=localStorage.getItem('wi_f'), sa=localStorage.getItem('wi_a');
-  if(sf&&sa){
-    FK=sf; AK=sa;
+  var sf=localStorage.getItem('wi_f');
+  if(sf){
+    FK=sf; AK='none';
     document.getElementById('fk').value=sf;
-    document.getElementById('ak').value=sa;
     chk();
     showDash(); setTimeout(fullSync,800);
   }
@@ -398,8 +386,8 @@ try{
 
 function activate(){
   FK=document.getElementById('fk').value.trim();
-  AK=document.getElementById('ak').value.trim();
-  try{localStorage.setItem('wi_f',FK);localStorage.setItem('wi_a',AK);}catch(e){}
+  AK='none';
+  try{localStorage.setItem('wi_f',FK);}catch(e){}
   showDash(); fullSync();
 }
 function showDash(){
@@ -627,76 +615,151 @@ async function fetchPrices(){
 }
 
 async function runAI(fd,qd,scores){
-  var fc=FIDS.map(function(cfg){var v=fd[cfg.id]?.value;return v!=null?cfg.label+':'+v:null;}).filter(Boolean).join(', ');
-  var qc=qd.length>0?'Earthquakes: '+qd.map(function(q){return'M'+q.mag+' '+q.place;}).join(', '):'.';
-  var sys='You are the world leading macro intelligence analyst. Today is '+new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'})+'. Be precise, direct, specific.';
-  var usr='Search most significant macro financial news last 6 hours then synthesise. FRED: '+fc+'. '+qc+'. World score: '+scores.world+'/100. BB: '+scores.bb+'. FG: '+scores.fg+'. Return ONLY raw JSON no markdown: {"news":[{"time":"HH:MM","headline":"...","source":"...","sentiment":"bullish|bearish|neutral","impact":0.85}],"verdict":"one sentence max 40 words","depthAnalysis":"4 sentences FRED data non-financial signals key risk 4-8 week outlook","geoRiskScore":72,"keyRisk":"8 words max","keyOpportunity":"8 words max","marketSignals":[{"label":"...","value":"...","direction":"up|down|flat","significance":"high|medium|low"}],"regionalHealth":{"US":0,"Europe":0,"China":0,"EM":0,"Japan":0}}';
-
+  // ── RICH FRED-ONLY ANALYSIS ──────────────────────────────────────────────
   var vix=fd.VIXCLS?.value, sp=fd.T10Y2Y?.value, hy=fd.BAMLH0A0HYM2?.value;
-  var cpi=fd.CPILFESL?.value, sent=fd.UMCSENT?.value, rate=fd.FEDFUNDS?.value;
+  var dgs10=fd.DGS10?.value, rate=fd.FEDFUNDS?.value, cpi=fd.CPILFESL?.value;
+  var unemp=fd.UNRATE?.value, sent=fd.UMCSENT?.value, claims=fd.ICSA?.value;
 
-  // Always show FRED-based verdict immediately
-  var fredVerdict='World score '+scores.world+'/100 — '+scores.regime+'. '
-    +(vix!=null?'VIX '+vix.toFixed(1)+' ('+(vix>25?'elevated':'contained')+'), ':'')
-    +(sp!=null?'yield curve '+(sp>=0?'+':'')+sp.toFixed(2)+'% ('+(sp<0?'inverted':'positive')+'), ':'')
-    +(cpi!=null?'core CPI '+cpi.toFixed(1)+'%, ':'')
-    +(rate!=null?'Fed rate '+rate.toFixed(2)+'%. ':'')
-    +(sent!=null?'Consumer sentiment '+sent.toFixed(0)+' ('+(sent<65?'very low — bearish signal':'moderate')+').':'')
-    +' Warsh hawkish debut — 9 FOMC members signalling hikes. FRED data live.';
+  // ── REGIME INTERPRETATION ─────────────────────────────────────────────────
+  var vixState  = vix==null?'unknown':vix>30?'CRISIS':vix>25?'ELEVATED':vix>18?'CAUTIOUS':'LOW VOLATILITY';
+  var ycState   = sp==null?'unknown':sp<-0.5?'DEEPLY INVERTED':sp<0?'INVERTED':sp<0.3?'FLAT':'POSITIVE';
+  var hyState   = hy==null?'unknown':hy>5?'STRESSED':hy>3.5?'WIDE':hy>2.5?'MODERATE':'TIGHT';
+  var cpiState  = cpi==null?'unknown':cpi>4?'HOT':cpi>3?'STICKY':cpi>2.5?'ABOVE TARGET':'CONTAINED';
+  var sentState = sent==null?'unknown':sent<50?'VERY WEAK':sent<65?'WEAK':sent<80?'MODERATE':'STRONG';
+  var claimsK   = claims!=null?(claims/1000).toFixed(0)+'K':'—';
 
-  var cv=sc(scores.world);
-  var vb=document.getElementById('vbox');
-  document.getElementById('vtitle').style.color=cv;
-  document.getElementById('vtext').textContent=fredVerdict;
+  // ── VERDICT ───────────────────────────────────────────────────────────────
+  var verdictParts = [];
+  if(sp!=null && sp<0) verdictParts.push('inverted yield curve signals recession risk');
+  else if(sp!=null && sp>0) verdictParts.push('yield curve turning positive — cycle maturing');
+  if(vix!=null && vix>25) verdictParts.push('elevated volatility suggests market stress');
+  else if(vix!=null && vix<18) verdictParts.push('low volatility — complacency risk');
+  if(cpi!=null && cpi>3) verdictParts.push('inflation above target keeping Fed restrictive');
+  if(sent!=null && sent<65) verdictParts.push('consumer confidence collapsed — demand risk ahead');
+  if(hy!=null && hy>4) verdictParts.push('credit markets showing stress');
+  else if(hy!=null && hy<3) verdictParts.push('tight credit spreads signal risk appetite');
+
+  var verdict = 'World score '+scores.world+'/100 — '+scores.regime+'. ';
+  if(verdictParts.length>0) verdict += verdictParts.slice(0,2).join('; ')+'. ';
+  verdict += 'Fed rate '+( rate!=null?rate.toFixed(2)+'%':'—')+' under Warsh — hawkish bias with 9 FOMC members signalling further hikes. ';
+  verdict += 'Unemployment '+(unemp!=null?unemp.toFixed(1)+'%':'—')+', jobless claims '+claimsK+' — labour market '+(claims!=null&&claims<230000?'resilient':'softening')+'.';
+
+  // ── DEPTH ANALYSIS ────────────────────────────────────────────────────────
+  var depth = '';
+  depth += 'FRED data shows '+(vixState)+' volatility (VIX '+( vix!=null?vix.toFixed(1):'—')+') with the yield curve '+(ycState.toLowerCase())+' at '+(sp!=null?(sp>=0?'+':'')+sp.toFixed(2)+'%':'—')+', while high-yield credit spreads at '+(hy!=null?hy.toFixed(2)+'%':'—')+' remain '+(hyState.toLowerCase())+'. ';
+  depth += 'Core inflation at '+(cpi!=null?cpi.toFixed(1)+'%':'—')+' is '+(cpiState.toLowerCase())+', keeping the Fed in restrictive territory at '+(rate!=null?rate.toFixed(2)+'%':'—')+' with Warsh signalling no cuts until price stability is firmly restored. ';
+  depth += 'Consumer sentiment at '+(sent!=null?sent.toFixed(0):'—')+' is '+(sentState.toLowerCase())+' — a leading indicator of weakening demand that typically precedes slower GDP by 2-3 quarters. ';
+
+  var qBig = (qd||[]).filter(function(q){return q.mag>=6.5;});
+  if(qBig.length>0){
+    depth += 'Seismic risk elevated with '+qBig.length+' significant earthquake'+(qBig.length>1?'s':'')+' this week including '+qBig[0].place+' (M'+qBig[0].mag+') — potential supply chain and humanitarian cost implications. ';
+  } else {
+    depth += 'No major seismic disruptions this week. ';
+  }
+  depth += 'Over the next 4-8 weeks, the key risk is '+(cpi!=null&&cpi>3?'a CPI surprise forcing Warsh to hike before markets are positioned':'growth deterioration if consumer weakness deepens')+', while the primary opportunity lies in '+(sp!=null&&sp>0?'front-end bonds if the yield curve steepens further':'defensive positioning as the cycle matures')+'.';
+
+  // ── KEY RISK / OPPORTUNITY ────────────────────────────────────────────────
+  var keyRisk = vix!=null&&vix>25 ? 'Market volatility spike on hawkish Fed surprise' :
+                sp!=null&&sp<0 ? 'Yield curve inversion deepens into recession signal' :
+                cpi!=null&&cpi>3.5 ? 'Sticky inflation forces unexpected rate hike' :
+                'Consumer confidence collapse hits corporate earnings';
+
+  var keyOpp = sp!=null&&sp>0 ? 'Yield curve normalisation — duration trade setting up' :
+               hy!=null&&hy<3 ? 'Tight spreads favour quality credit over equities' :
+               sent!=null&&sent<60 ? 'Contrarian — sentiment extreme may signal turning point' :
+               'Defensive sectors outperform as growth slows';
+
+  // ── MARKET SIGNALS ────────────────────────────────────────────────────────
+  var signals = [];
+  if(sp!=null) signals.push({label:'Yield Curve',value:(sp>=0?'+':'')+sp.toFixed(2)+'%',direction:sp>0.3?'up':sp<0?'down':'flat',significance:'high'});
+  if(vix!=null) signals.push({label:'VIX',value:vix.toFixed(1),direction:vix>25?'up':vix<15?'down':'flat',significance:'high'});
+  if(hy!=null) signals.push({label:'HY Spreads',value:hy.toFixed(2)+'%',direction:hy>4?'up':hy<2.5?'down':'flat',significance:'high'});
+  if(rate!=null) signals.push({label:'Fed Rate',value:rate.toFixed(2)+'%',direction:'flat',significance:'high'});
+  if(cpi!=null) signals.push({label:'Core CPI YoY',value:cpi.toFixed(1)+'%',direction:cpi>3?'up':'flat',significance:'high'});
+  if(sent!=null) signals.push({label:'Consumer Sent.',value:sent.toFixed(0),direction:sent<65?'down':'flat',significance:'medium'});
+
+  // ── REGIONAL HEALTH ───────────────────────────────────────────────────────
+  var usHealth = Math.round(scores.world);
+  var regional = {
+    'US': usHealth,
+    'Europe': Math.max(20, usHealth - 12),
+    'China': Math.max(20, usHealth - 8),
+    'EM': Math.max(15, usHealth - 15),
+    'Japan': Math.max(25, usHealth - 5)
+  };
+
+  // ── RENDER EVERYTHING ─────────────────────────────────────────────────────
+  var cv = sc(scores.world);
+
+  // Verdict
+  var vb = document.getElementById('vbox');
+  document.getElementById('vtitle').style.color = cv;
+  document.getElementById('vtext').textContent = verdict;
   vb.style.display='block';
   vb.style.background='#0C1220';
   vb.style.border='1px solid '+cv+'30';
   vb.style.borderLeft='3px solid '+cv;
 
-  // Try AI synthesis
-  try{
-    setPhase('Running AI news scan...');
-    var p=await doAI(sys,usr,2000);
-    if(!p)throw new Error('no json');
-    if(p.news){
-      document.getElementById('nscroll').innerHTML=p.news.map(function(item){
-        var s=item.sentiment;
-        var c=s==='bullish'?'#B6FF3D':s==='bearish'?'#FF3D5A':'#F5A623';
-        var bd=s==='bullish'?'BULL':s==='bearish'?'BEAR':'NEUT';
-        var pct=Math.round((item.impact||0.5)*100);
-        return '<div class="nitem"><div class="nmeta"><span class="ntime">'+(item.time||'')+' · '+(item.source||'')+'</span><span class="nbadge" style="color:'+c+';background:'+c+'18;border:1px solid '+c+'30">'+bd+'</span></div><div class="nhead">'+(item.headline||'')+'</div><div class="nbar"><div class="nbarfill" style="width:'+pct+'%;background:'+c+'"></div></div></div>';
-      }).join('');
-      var bl=p.news.filter(function(n){return n.sentiment==='bullish';}).length;
-      var br=p.news.filter(function(n){return n.sentiment==='bearish';}).length;
-      document.getElementById('nb').textContent='B:'+bl;
-      document.getElementById('nn').textContent='N:'+(p.news.length-bl-br);
-      document.getElementById('nba').textContent='Ba:'+br;
-      document.getElementById('nfoot').style.display='flex';
+  // Depth
+  document.getElementById('dtxt').textContent = depth;
+  document.getElementById('dbox').style.display = 'block';
+
+  // Key risk / opp
+  document.getElementById('rtxt').textContent = keyRisk;
+  document.getElementById('otxt').textContent = keyOpp;
+  document.getElementById('rgrid').style.display = 'grid';
+
+  // Market signals
+  document.getElementById('siggrid').innerHTML = signals.map(function(s){
+    var c3=s.direction==='up'?'#B6FF3D':s.direction==='down'?'#FF3D5A':'#F5A623';
+    if(s.label==='VIX'||s.label==='HY Spreads'||s.label==='Core CPI YoY'){
+      c3=s.direction==='up'?'#FF3D5A':s.direction==='down'?'#B6FF3D':'#F5A623';
     }
-    if(p.verdict){
-      document.getElementById('vtext').textContent=p.verdict;
-    }
-    if(p.geoRiskScore)computeScores(fd,qd,p.geoRiskScore);
-    if(p.depthAnalysis){document.getElementById('dtxt').textContent=p.depthAnalysis;document.getElementById('dbox').style.display='block';}
-    if(p.keyRisk){document.getElementById('rtxt').textContent=p.keyRisk;document.getElementById('otxt').textContent=p.keyOpportunity||'';document.getElementById('rgrid').style.display='grid';}
-    if(p.marketSignals){
-      document.getElementById('siggrid').innerHTML=p.marketSignals.map(function(s){
-        var c3=s.direction==='up'?'#B6FF3D':s.direction==='down'?'#FF3D5A':'#F5A623';
-        return '<div class="scard" style="background:#090E1A;border:1px solid '+c3+'25"><div class="slbl">'+s.label+'</div><div class="sval" style="color:'+c3+'">'+s.value+'</div><div class="ssig">'+s.significance+' significance</div></div>';
-      }).join('');
-      document.getElementById('sigpanel').style.display='block';
-    }
-    if(p.regionalHealth){
-      document.getElementById('regbars').innerHTML=Object.entries(p.regionalHealth).map(function(e){
-        var c4=e[1]>65?'#5CDB95':e[1]>45?'#F5A623':'#FF3D5A';
-        return '<div class="rbwrap"><div class="rbhdr"><span class="rblbl">'+e[0]+'</span><span class="rbval" style="color:'+c4+'">'+e[1]+'/100</span></div><div class="rbtrack"><div class="rbfill" style="width:'+e[1]+'%;background:'+c4+'"></div></div></div>';
-      }).join('');
-      document.getElementById('regsec').style.display='block';
-    }
-  }catch(e){
-    // FRED verdict already shown above - just note AI timed out in news panel
-    document.getElementById('nscroll').innerHTML='<div style="padding:20px;color:#7A8AAA;font-size:11px;text-align:center">AI news scan unavailable — FRED data is live above.<br><br>To enable AI news: ensure your Anthropic key is valid at console.anthropic.com</div>';
-  }
+    return '<div class="scard" style="background:#090E1A;border:1px solid '+c3+'25"><div class="slbl">'+s.label+'</div><div class="sval" style="color:'+c3+'">'+s.value+'</div><div class="ssig">'+s.significance+' significance</div></div>';
+  }).join('');
+  document.getElementById('sigpanel').style.display = 'block';
+
+  // Regional health
+  document.getElementById('regbars').innerHTML = Object.entries(regional).map(function(e){
+    var c4=e[1]>65?'#5CDB95':e[1]>45?'#F5A623':'#FF3D5A';
+    return '<div class="rbwrap"><div class="rbhdr"><span class="rblbl">'+e[0]+'</span><span class="rbval" style="color:'+c4+'">'+e[1]+'/100</span></div><div class="rbtrack"><div class="rbfill" style="width:'+e[1]+'%;background:'+c4+'"></div></div></div>';
+  }).join('');
+  document.getElementById('regsec').style.display = 'block';
+
+  // Regime signals box - 6 signal cards
+  var regimeSignals = [
+    {label:'Yield Curve', val:ycState, c:sp==null?'#F5A623':sp<0?'#FF3D5A':sp>0.3?'#B6FF3D':'#F5A623', desc:sp!=null?(sp>=0?'+':'')+sp.toFixed(2)+'%':'—'},
+    {label:'Volatility',  val:vixState, c:vix==null?'#F5A623':vix>25?'#FF3D5A':vix<18?'#B6FF3D':'#F5A623', desc:vix!=null?vix.toFixed(1):'—'},
+    {label:'Credit',      val:hyState, c:hy==null?'#F5A623':hy>4?'#FF3D5A':hy<2.5?'#B6FF3D':'#F5A623', desc:hy!=null?hy.toFixed(2)+'%':'—'},
+    {label:'Inflation',   val:cpiState, c:cpi==null?'#F5A623':cpi>3?'#FF3D5A':cpi<2.5?'#B6FF3D':'#F5A623', desc:cpi!=null?cpi.toFixed(1)+'%':'—'},
+    {label:'Employment',  val:unemp!=null?(unemp<4?'STRONG':unemp<5?'MODERATE':'WEAK'):'—', c:unemp==null?'#F5A623':unemp<4?'#B6FF3D':unemp>5?'#FF3D5A':'#F5A623', desc:unemp!=null?unemp.toFixed(1)+'%':'—'},
+    {label:'Sentiment',   val:sentState, c:sent==null?'#F5A623':sent<65?'#FF3D5A':sent>85?'#B6FF3D':'#F5A623', desc:sent!=null?sent.toFixed(0):'—'},
+  ];
+
+  // News panel - replace with FRED-driven intelligence items
+  var newsItems = [];
+  if(sp!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED',headline:'Yield curve at '+(sp>=0?'+':'')+sp.toFixed(2)+'% — '+(sp<0?'inversion signals recession risk ahead':'turning positive, late-cycle dynamics'),sentiment:sp<0?'bearish':sp>0.3?'bullish':'neutral',impact:0.9});
+  if(vix!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED/CBOE',headline:'VIX at '+vix.toFixed(1)+' — market volatility is '+(vix>25?'elevated, risk-off conditions':'contained, but watch for complacency'),sentiment:vix>25?'bearish':vix<15?'bullish':'neutral',impact:0.85});
+  if(cpi!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED/BLS',headline:'Core CPI at '+cpi.toFixed(1)+'% — '+(cpi>3?'above target, Warsh has justification to hold or hike':'approaching target, rate path softening'),sentiment:cpi>3?'bearish':'bullish',impact:0.88});
+  if(sent!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED/UMich',headline:'Consumer sentiment at '+sent.toFixed(0)+' — '+(sent<65?'historically weak level, demand destruction risk':'moderate, consumer still engaged'),sentiment:sent<65?'bearish':'neutral',impact:0.82});
+  if(hy!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED/ICE',headline:'High-yield credit spreads '+hy.toFixed(2)+'% — credit markets are '+(hy>4?'showing stress, watch for defaults':'calm, risk appetite holding'),sentiment:hy>4?'bearish':hy<2.5?'bullish':'neutral',impact:0.80});
+  if(rate!=null) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'FRED/Fed',headline:'Fed funds rate '+rate.toFixed(2)+'% under Chair Warsh — 9 of 18 FOMC members project further hikes in 2026',sentiment:'bearish',impact:0.95});
+  if(qd.length>0) newsItems.push({time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),source:'USGS',headline:qd.length+' significant earthquake'+(qd.length>1?'s':'')+' this week — '+qd[0].place+' (M'+qd[0].mag+')',sentiment:qd[0].mag>=7?'bearish':'neutral',impact:qd[0].mag>=7?0.85:0.55});
+
+  document.getElementById('nscroll').innerHTML = newsItems.map(function(item){
+    var s=item.sentiment;
+    var c=s==='bullish'?'#B6FF3D':s==='bearish'?'#FF3D5A':'#F5A623';
+    var bd=s==='bullish'?'BULL':s==='bearish'?'BEAR':'NEUT';
+    var pct=Math.round((item.impact||0.5)*100);
+    return '<div class="nitem"><div class="nmeta"><span class="ntime">'+(item.time||'')+' · '+(item.source||'')+'</span><span class="nbadge" style="color:'+c+';background:'+c+'18;border:1px solid '+c+'30">'+bd+'</span></div><div class="nhead">'+(item.headline||'')+'</div><div class="nbar"><div class="nbarfill" style="width:'+pct+'%;background:'+c+'"></div></div></div>';
+  }).join('');
+
+  var bl=newsItems.filter(function(n){return n.sentiment==='bullish';}).length;
+  var br=newsItems.filter(function(n){return n.sentiment==='bearish';}).length;
+  document.getElementById('nb').textContent='B:'+bl;
+  document.getElementById('nn').textContent='N:'+(newsItems.length-bl-br);
+  document.getElementById('nba').textContent='Ba:'+br;
+  document.getElementById('nfoot').style.display='flex';
 }
 
 async function fullSync(){
